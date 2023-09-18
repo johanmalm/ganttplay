@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+
+import datetime as dt
+import pandas as pd
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+
+class Schedule():
+    def __init__(self, filename):
+        self.df = pd.read_csv(filename, skip_blank_lines=True,
+                              delim_whitespace=True)
+        self.schedule_start=dt.datetime(2023, 9, 1)
+        self.schedule_finish=dt.datetime(2024, 2, 28)
+        self.schedule_dur=(self.schedule_finish - self.schedule_start).days + 1
+        # TODO: Consier automating this
+        # schedule_start = pd.to_datetime(df['start']).min()
+        # schedule_finish = pd.to_datetime(df['finish']).max()
+        self.df['_start'] = (pd.to_datetime(self.df['start']) - self.schedule_start).dt.days
+        self.df['_prog'] = self.df['prog'] * self.df['dur'] / 100
+        # Resolve relative column values
+        for index, row in self.df.iterrows():
+            if index == 0:
+                continue
+            self.df.at[index, 'row'] = int(row['row']) + int(self.df.at[index - 1, 'row'])
+        #print(df)
+
+    def plot(self):
+        fig, ax = plt.subplots()
+        for index, row in self.df.iterrows():
+            # Coarse filter to only render tasks inside schedule start/finish dates
+            if (int(row['_start']) < 0) or int(row['_start']) + row['dur'] > self.schedule_dur:
+                continue
+
+            # Render task
+            hbar = plt.barh(y=row['row'], width=row['dur'], left=row['_start'],
+                    color=row['col'], alpha=0.4)
+            label = row['desc']
+            if not pd.isnull(label):
+                ax.bar_label(hbar, labels=[label], padding=2)
+                #TODO: Optionally position text above
+                #ax.text(x=row['_start']+1, y=row['row']-0.5, s=label, color='black')
+
+            # Render progress
+            plt.barh(y=row['row'], width=row['_prog'], left=row['_start'], color=row['col'])
+
+        plt.gca().invert_yaxis()
+
+        # Set title
+        plt.title('6-month lookahead', fontsize=15)
+
+        # Setup axes
+        STEP = 31
+        xticks = np.arange(0, self.schedule_dur, STEP)
+        xticklabels = pd.date_range(start=self.schedule_start,
+                                    end=self.schedule_finish).strftime("       %b")
+        ax.set_xlim(0, self.schedule_dur)
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xticklabels[::STEP])
+        ax.xaxis.grid(True, alpha=0.5)
+
+        ax.set_yticks([])
+        ax.set_yticklabels([])
+
+        # Legend
+        legend_lookup = {'m': 'magenta', 'y': 'yellow'}
+        patches = []
+        for color, label in legend_lookup.items():
+            patches.append(matplotlib.patches.Patch(color=color))
+        ax.legend(handles=patches, labels=legend_lookup.values(), fontsize=10)
+
+        # Today-line
+        now = (dt.datetime.now() - self.schedule_start).days
+        ax.axvline(x=now, color='b', linestyle='dashed')
+
+        plt.margins(0.2)
+        plt.show()
+
+def main():
+    s = Schedule('data')
+    s.plot()
+
+if __name__ == '__main__':
+    main()
