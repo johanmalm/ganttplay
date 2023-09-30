@@ -5,13 +5,14 @@ import pandas as pd
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import tomllib
 
 class Schedule():
-    def __init__(self, filename):
+    def __init__(self, filename, start, finish):
         self.df = pd.read_csv(filename, skip_blank_lines=True,
                               delim_whitespace=True)
-        self.schedule_start=dt.datetime(2023, 9, 1)
-        self.schedule_finish=dt.datetime(2024, 2, 28)
+        self.schedule_start=start
+        self.schedule_finish=finish
         self.schedule_dur=(self.schedule_finish - self.schedule_start).days + 1
         # TODO: Consier automating this
         # schedule_start = pd.to_datetime(df['start']).min()
@@ -77,7 +78,13 @@ class Schedule():
         plt.show()
 
 def main():
-    s = Schedule('data')
+    with open('config.toml', 'rb') as f:
+        config = tomllib.load(f)
+
+    start = config["schedule"]["start_date"]
+    finish = config["schedule"]["finish_date"]
+
+    s = Schedule('data', start, finish)
     s.plot()
 
 if __name__ == '__main__':
