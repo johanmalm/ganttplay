@@ -1,11 +1,27 @@
 #!/usr/bin/env python3
 
+import tomllib
+from tokenize import tokenize, NUMBER, NAME, OP
+from io import BytesIO
+import sys
 import datetime as dt
 import pandas as pd
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-import tomllib
+
+def die(msg):
+    print(f"fatal: {msg}")
+    sys.exit(1)
+
+def map_field(char):
+    if char == "D":
+        return 'dur'
+    if char == "S":
+        return 'start'
+    if char == "F":
+        return 'finish'
+    die("incorrect column reference")
 
 class Schedule():
     def __init__(self, filename, start, finish):
@@ -17,33 +33,38 @@ class Schedule():
         # TODO: Consier automating this
         # schedule_start = pd.to_datetime(df['start']).min()
         # schedule_finish = pd.to_datetime(df['finish']).max()
-        self.df['_start'] = (pd.to_datetime(self.df['start']) - self.schedule_start).dt.days
         self.df['_prog'] = self.df['prog'] * self.df['dur'] / 100
+        for index, row in self.df.iterrows():
+            if self.df.at[index, 'start'][0] != '=':
+                self.df.at[index, 'start'] = (pd.to_datetime(self.df.at[index, 'start']) -
+                                              self.schedule_start).days
+            if self.df.at[index, 'finish'][0] != '=':
+                self.df.at[index, 'finish'] = (pd.to_datetime(self.df.at[index, 'finish']) -
+                                               self.schedule_start).days
         # Resolve relative column values
         for index, row in self.df.iterrows():
             if index == 0:
                 continue
             self.df.at[index, 'row'] = int(row['row']) + int(self.df.at[index - 1, 'row'])
-        #print(df)
 
     def plot(self):
         fig, ax = plt.subplots()
-        for index, row in self.df.iterrows():
+        for _, row in self.df.iterrows():
             # Coarse filter to only render tasks inside schedule start/finish dates
-            if (int(row['_start']) < 0) or int(row['_start']) + row['dur'] > self.schedule_dur:
+            if (int(row['start']) < 0) or int(row['start']) + row['dur'] > self.schedule_dur:
                 continue
 
             # Render task
-            hbar = plt.barh(y=row['row'], width=row['dur'], left=row['_start'],
+            hbar = plt.barh(y=row['row'], width=row['dur'], left=row['start'],
                     color=row['col'], alpha=0.4)
             label = row['desc']
             if not pd.isnull(label):
                 ax.bar_label(hbar, labels=[label], padding=2)
                 #TODO: Optionally position text above
-                #ax.text(x=row['_start']+1, y=row['row']-0.5, s=label, color='black')
+                #ax.text(x=row['start']+1, y=row['row']-0.5, s=label, color='black')
 
             # Render progress
-            plt.barh(y=row['row'], width=row['_prog'], left=row['_start'], color=row['col'])
+            plt.barh(y=row['row'], width=row['_prog'], left=row['start'], color=row['col'])
 
         plt.gca().invert_yaxis()
 
@@ -77,6 +98,58 @@ class Schedule():
         plt.margins(0.2)
         plt.show()
 
+    def get_index_by_id(self, _id):
+        for index, row in self.df.iterrows():
+            if str(row['id']) == str(_id):
+                return index
+        die(f"no id '{id}'")
+
+    def contains_cell_references(self, string):
+        tokens = tokenize(BytesIO(string.encode('utf-8')).readline)
+        for toknum, _, _, _, _ in tokens:
+            if toknum == NAME:
+                return True
+        return False
+
+    def process_one_formula(self, index, col):
+        string = self.df.at[index, col]
+        tokens = tokenize(BytesIO(string.encode('utf-8')).readline)
+        ret=[]
+        for toknum, tokval, _, _, _ in tokens:
+            if toknum not in (NAME, NUMBER, OP):
+                continue
+            if toknum != NAME:
+                ret += [tokval]
+            else:
+#                if (tokval[0] == 'D' or tokval[0] == 'S' or tokval[0] == 'F'):
+                if (tokval[0] in ('D', 'S', 'F')):
+                    uid = tokval[1:]
+                    expr = str(self.df.at[self.get_index_by_id(uid), map_field(tokval[0])])
+                    if self.contains_cell_references(expr):
+                        return False
+                    ret += [expr]
+        expression = "".join(ret).replace("=", "")
+        value = eval(expression)
+        self.df.at[index, col] = value
+        return True
+
+    def process_formulas(self):
+        print(self.df)
+        more_work_to_do = True
+        while more_work_to_do:
+            more_work_to_do = False
+            for col in ['dur', 'start', 'finish']:
+                for index, row in self.df.iterrows():
+                    if isinstance(row[col], int):
+                        continue
+                    # Formulas must start with equal sign
+                    if isinstance(row[col], str) and row[col][0] != '=':
+                        continue
+                    success = self.process_one_formula(index, col)
+                    if not success:
+                        more_work_to_do = True
+        print(self.df)
+
 def main():
     with open('config.toml', 'rb') as f:
         config = tomllib.load(f)
@@ -85,6 +158,7 @@ def main():
     finish = config["schedule"]["finish_date"]
 
     s = Schedule('data', start, finish)
+    s.process_formulas()
     s.plot()
 
 if __name__ == '__main__':
