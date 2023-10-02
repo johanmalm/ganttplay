@@ -62,8 +62,9 @@ class Schedule():
                 continue
 
             # Render task
+            height = 0.4 #default is 0.8
             hbar = plt.barh(y=row['row'], width=row['dur'], left=row['start'],
-                    color=row['col'], alpha=0.4)
+                    color=row['col'], height=height, alpha=0.4)
             label = row['desc']
             if not pd.isnull(label):
                 ax.bar_label(hbar, labels=[label], padding=2)
@@ -71,7 +72,8 @@ class Schedule():
                 #ax.text(x=row['start']+1, y=row['row']-0.5, s=label, color='black')
 
             # Render progress
-            plt.barh(y=row['row'], width=row['_prog'], left=row['start'], color=row['col'])
+            plt.barh(y=row['row'], width=row['_prog'], left=row['start'], color=row['col'],
+                     height=height)
 
         plt.gca().invert_yaxis()
 
