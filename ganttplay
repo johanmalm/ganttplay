@@ -30,10 +30,7 @@ class Schedule():
         self.schedule_start=start
         self.schedule_finish=finish
         self.schedule_dur=(self.schedule_finish - self.schedule_start).days + 1
-        # TODO: Consier automating this
-        # schedule_start = pd.to_datetime(df['start']).min()
-        # schedule_finish = pd.to_datetime(df['finish']).max()
-        self.df['_prog'] = self.df['prog'] * self.df['dur'] / 100
+
         for index, row in self.df.iterrows():
             if self.df.at[index, 'start'][0] != '=':
                 self.df.at[index, 'start'] = (pd.to_datetime(self.df.at[index, 'start']) -
@@ -148,6 +145,9 @@ class Schedule():
                     success = self.process_one_formula(index, col)
                     if not success:
                         more_work_to_do = True
+        for col in ['dur', 'start', 'finish']:
+            self.df[col] = self.df[col].astype('int')
+        self.df['_prog'] = self.df['prog'] * self.df['dur'] / 100
         print(self.df)
 
 def main():
