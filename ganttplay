@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 
+"""
+Simple gantt tool
+
+SPDX-License-Identifier: GPL-2.0-only
+
+Copyright (C) Johan Malm 2023
+"""
+
 import tomllib
 from tokenize import tokenize, NUMBER, NAME, OP
 from io import BytesIO
@@ -11,10 +19,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 def die(msg):
+    """ die """
     print(f"fatal: {msg}")
     sys.exit(1)
 
 def map_field(char):
+    """ map the letter in a cell-name to its corresponding field name """
     if char == "D":
         return 'dur'
     if char == "S":
@@ -25,8 +35,7 @@ def map_field(char):
 
 class Schedule():
     def __init__(self, filename, start, finish):
-        self.df = pd.read_csv(filename, skip_blank_lines=True,
-                              delim_whitespace=True)
+        self.df = pd.read_csv(filename, skip_blank_lines=True, delim_whitespace=True)
         self.schedule_start=start
         self.schedule_finish=finish
         self.schedule_dur=(self.schedule_finish - self.schedule_start).days + 1
@@ -45,6 +54,7 @@ class Schedule():
             self.df.at[index, 'row'] = int(row['row']) + int(self.df.at[index - 1, 'row'])
 
     def plot(self):
+        """ plot """
         fig, ax = plt.subplots()
         for _, row in self.df.iterrows():
             # Coarse filter to only render tasks inside schedule start/finish dates
@@ -93,15 +103,20 @@ class Schedule():
         ax.axvline(x=now, color='b', linestyle='dashed')
 
         plt.margins(0.2)
-        plt.show()
 
     def get_index_by_id(self, _id):
+        """
+        Get dataframe index from 'id'.
+        The 'id' column exists to enable [a not yet implemented] 'prev'
+        column for rendering links
+        """
         for index, row in self.df.iterrows():
             if str(row['id']) == str(_id):
                 return index
         die(f"no id '{id}'")
 
     def contains_cell_references(self, string):
+        """ Return true if formula contains a token with letters """
         tokens = tokenize(BytesIO(string.encode('utf-8')).readline)
         for toknum, _, _, _, _ in tokens:
             if toknum == NAME:
@@ -109,6 +124,14 @@ class Schedule():
         return False
 
     def process_one_formula(self, index, col):
+        """
+        Resolve cell references (e.g. S10) in formulas if the cell
+        pointed at does not contain further cell references.
+        We call this function from a loop iterating over all
+        dur/start/finish until all cells are resolved+evaluated.
+        Handling this recursively would be more efficient, but makes it
+        harder to avoid a crash on circular referencing.
+        """
         string = self.df.at[index, col]
         tokens = tokenize(BytesIO(string.encode('utf-8')).readline)
         ret=[]
@@ -118,8 +141,7 @@ class Schedule():
             if toknum != NAME:
                 ret += [tokval]
             else:
-#                if (tokval[0] == 'D' or tokval[0] == 'S' or tokval[0] == 'F'):
-                if (tokval[0] in ('D', 'S', 'F')):
+                if tokval[0] in ('D', 'S', 'F'):
                     uid = tokval[1:]
                     expr = str(self.df.at[self.get_index_by_id(uid), map_field(tokval[0])])
                     if self.contains_cell_references(expr):
@@ -131,6 +153,7 @@ class Schedule():
         return True
 
     def process_formulas(self):
+        """ Resolve + evaluate formulas in dur/start/finish columns """
         print(self.df)
         more_work_to_do = True
         while more_work_to_do:
@@ -151,15 +174,37 @@ class Schedule():
         print(self.df)
 
 def main():
+    """ main """
     with open('config.toml', 'rb') as f:
         config = tomllib.load(f)
 
-    start = config["schedule"]["start_date"]
-    finish = config["schedule"]["finish_date"]
+    try:
+        start = config["schedule"]["start_date"]
+    except:
+        die("no schedule.start_date in config file")
+    try:
+        finish = config["schedule"]["finish_date"]
+    except:
+        die("no schedule.finish_date in config file")
+    try:
+        width = int(config["plot"]["width"])
+    except:
+        width = 5
+        print(f"warn: no plot.width in config file")
+    try:
+        height = int(config["plot"]["height"])
+    except:
+        height = 5
+        print(f"warn: no plot.height in config file")
+
+    plt.rcParams['figure.figsize'] = [width, height]
 
     s = Schedule('data', start, finish)
     s.process_formulas()
     s.plot()
+
+    plt.savefig("Figure_1.png")
+    #plt.show()
 
 if __name__ == '__main__':
     main()
