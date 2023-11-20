@@ -17,6 +17,9 @@ import pandas as pd
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any
 
 def die(msg):
     """ die """
@@ -175,33 +178,46 @@ class Schedule():
         self.df['_prog'] = self.df['prog'] * self.df['dur'] / 100
         print(self.df)
 
+SettingType = Enum('SettingType', 'STRING NUMBER DATE')
+
+@dataclass
+class Node:
+  key: str
+  value: Any
+  entity: SettingType
+
+def setting(key: str, value: Any, entity: SettingType):
+  return Node(key=key, value=value, entity=entity)
+
+SETTINGS = [
+  setting("schedule/start_date", dt.date(2023,9,1), SettingType.DATE),
+  setting("schedule/finish_date", dt.date(2024,2,28), SettingType.DATE),
+  setting("schedule/title", "foobar", SettingType.STRING),
+  setting("plot/width", 12, SettingType.NUMBER),
+  setting("plot/height", 6, SettingType.NUMBER),
+]
+
 def main():
     """ main """
     with open('config.toml', 'rb') as f:
         config = tomllib.load(f)
 
-    try:
-        start = config["schedule"]["start_date"]
-    except:
-        die("no schedule.start_date in config file")
-    try:
-        finish = config["schedule"]["finish_date"]
-    except:
-        die("no schedule.finish_date in config file")
-    try:
-        width = int(config["plot"]["width"])
-    except:
-        width = 5
-        print(f"warn: no plot.width in config file")
-    try:
-        height = int(config["plot"]["height"])
-    except:
-        height = 5
-        print(f"warn: no plot.height in config file")
+    defaults = {setting.key: setting for setting in SETTINGS}
+    settings = {}
+    for key, node in defaults.items():
+        section = node.key.split('/')[0]
+        variable = node.key.split('/')[1]
+        try:
+            settings[key] = setting(key, config[section][variable], node.entity)
+        except:
+            settings[key] = node
 
-    plt.rcParams['figure.figsize'] = [width, height]
+    for key, node in settings.items():
+        print(f"{key}: {node.key.split('/')[0]}-{node.key.split('/')[1]} = {node.value}")
 
-    s = Schedule('data', start, finish)
+    plt.rcParams['figure.figsize'] = [settings["plot/width"].value, settings["plot/height"].value]
+
+    s = Schedule('data', settings["schedule/start_date"].value, settings["schedule/finish_date"].value)
     s.process_formulas()
     s.plot()
 
