@@ -42,10 +42,10 @@ class Schedule():
 
         for index, row in self.df.iterrows():
             if self.df.at[index, 'start'][0] != '=':
-                self.df.at[index, 'start'] = (pd.to_datetime(self.df.at[index, 'start']) -
+                self.df.at[index, 'start'] = (pd.to_datetime(self.df.at[index, 'start']).date() -
                                               self.schedule_start).days
             if self.df.at[index, 'finish'][0] != '=':
-                self.df.at[index, 'finish'] = (pd.to_datetime(self.df.at[index, 'finish']) -
+                self.df.at[index, 'finish'] = (pd.to_datetime(self.df.at[index, 'finish']).date() -
                                                self.schedule_start).days
         # Resolve relative column values
         for index, row in self.df.iterrows():
@@ -101,7 +101,7 @@ class Schedule():
         ax.legend(handles=patches, labels=legend_lookup.values(), fontsize=10)
 
         # Today-line
-        now = (dt.datetime.now() - self.schedule_start).days
+        now = (dt.datetime.now().date() - self.schedule_start).days
         ax.axvline(x=now, color='b', linestyle='dashed')
 
         plt.margins(0.2)
