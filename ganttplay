@@ -211,9 +211,11 @@ def main():
             settings[key] = setting(key, config[section][variable], node.entity)
         except:
             settings[key] = node
+        if settings[key].entity == SettingType.DATE and type(settings[key].value) != dt.date:
+            die(f"datetime.date required for {key}; {type(settings[key].value)} provided")
 
-    for key, node in settings.items():
-        print(f"{key}: {node.key.split('/')[0]}-{node.key.split('/')[1]} = {node.value}")
+#    for key, node in settings.items():
+#        print(f"{key}: {node.key.split('/')[0]}-{node.key.split('/')[1]} = {node.value}")
 
     plt.rcParams['figure.figsize'] = [settings["plot/width"].value, settings["plot/height"].value]
 
