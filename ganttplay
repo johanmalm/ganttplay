@@ -71,9 +71,10 @@ class Schedule():
                     color=row['col'], height=height, alpha=0.4)
             label = row['desc']
             if not pd.isnull(label):
-                ax.bar_label(hbar, labels=[label], padding=2)
-                #TODO: Optionally position text above
-                #ax.text(x=row['start']+1, y=row['row']-0.5, s=label, color='black')
+                if row['pos'] == 'e':
+                    ax.bar_label(hbar, labels=[label], padding=2)
+                else:
+                    ax.text(x=row['start']+0.5, y=row['row']-height*0.7, s=label, color='black')
 
             # Render progress
             plt.barh(y=row['row'], width=row['_prog'], left=row['start'], color=row['col'],
@@ -183,8 +184,10 @@ class Schedule():
     def datify(self):
         """ Convert start+finish dates to date format from the default offset (in days) """
         for index, row in self.df.iterrows():
-            self.df.at[index, 'start'] = self.schedule_start + dt.timedelta(days=int(self.df.at[index, 'start']))
-            self.df.at[index, 'finish'] = self.schedule_start + dt.timedelta(days=int(self.df.at[index, 'finish']))
+            self.df.at[index, 'start'] = (self.schedule_start +
+                                          dt.timedelta(days=int(self.df.at[index, 'start'])))
+            self.df.at[index, 'finish'] = (self.schedule_start +
+                                           dt.timedelta(days=int(self.df.at[index, 'finish'])))
 
 SettingType = Enum('SettingType', 'STRING NUMBER DATE')
 
@@ -208,7 +211,8 @@ SETTINGS = [
 def main():
     """ main """
     parser = argparse.ArgumentParser(prog="ganttplay")
-    parser.add_argument("--solve-formulas", help="Solve formulas and print values", action='store_true')
+    parser.add_argument("--solve-formulas", help="Solve formulas and print values",
+                        action='store_true')
     args = parser.parse_args()
 
     with open('config.toml', 'rb') as f:
@@ -228,7 +232,8 @@ def main():
 
     plt.rcParams['figure.figsize'] = [settings["plot/width"].value, settings["plot/height"].value]
 
-    s = Schedule('data', settings["schedule/start_date"].value, settings["schedule/finish_date"].value)
+    s = Schedule('data', settings["schedule/start_date"].value,
+                 settings["schedule/finish_date"].value)
     s.process_formulas()
 
     if args.solve_formulas:
