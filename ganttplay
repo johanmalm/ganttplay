@@ -120,7 +120,7 @@ class Schedule():
         for index, row in self.df.iterrows():
             if str(row['id']) == str(_id):
                 return index
-        die(f"no id '{id}'")
+        die(f"no id '{_id}'")
 
     def contains_cell_references(self, string):
         """ Return true if formula contains a token with letters """
