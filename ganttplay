@@ -59,7 +59,7 @@ class Schedule():
 
     def plot(self):
         """ plot """
-        fig, ax = plt.subplots()
+        _, self.ax = plt.subplots()
         for _, row in self.df.iterrows():
             # Coarse filter to only render tasks inside schedule start/finish dates
             if (int(row['start']) < 0) or int(row['start']) + row['dur'] > self.schedule_dur:
@@ -72,9 +72,10 @@ class Schedule():
             label = row['desc']
             if not pd.isnull(label):
                 if row['pos'] == 'e':
-                    ax.bar_label(hbar, labels=[label], padding=2)
+                    self.ax.bar_label(hbar, labels=[label], padding=2)
                 else:
-                    ax.text(x=row['start']+0.5, y=row['row']-height*0.7, s=label, color='black')
+                    self.ax.text(x=row['start']+0.5, y=row['row']-height*0.7,
+                                 s=label, color='black')
 
             # Render progress
             plt.barh(y=row['row'], width=row['_prog'], left=row['start'], color=row['col'],
@@ -95,26 +96,31 @@ class Schedule():
         xticklabels = pd.date_range(start=self.schedule_start,
                                     end=self.schedule_finish+dt.timedelta(days=1),
                                     freq='m').strftime("%b")
-        ax.set_xlim(0, self.schedule_dur)
-        ax.set_xticks(xticks)
-        ax.set_xticklabels(xticklabels)
-        ax.xaxis.grid(True, alpha=0.5)
+        self.ax.set_xlim(0, self.schedule_dur)
+        self.ax.set_xticks(xticks)
+        self.ax.set_xticklabels(xticklabels)
+        self.ax.xaxis.grid(True, alpha=0.5)
 
-        ax.set_yticks([])
-        ax.set_yticklabels([])
-
-        # Legend
-        legend_lookup = {'m': 'magenta', 'y': 'yellow'}
-        patches = []
-        for color, label in legend_lookup.items():
-            patches.append(matplotlib.patches.Patch(color=color))
-        ax.legend(handles=patches, labels=legend_lookup.values(), fontsize=10)
+        self.ax.set_yticks([])
+        self.ax.set_yticklabels([])
 
         # Today-line
         now = (dt.datetime.now().date() - self.schedule_start).days
-        ax.axvline(x=now, color='b', linestyle='dashed')
+        self.ax.axvline(x=now, color='b', linestyle='dashed')
 
         plt.margins(0.2)
+
+    def set_legend(self, legend_string):
+        def parse(s):
+            tmp=s.split(':', maxsplit=2)
+            return { tmp[0]: tmp[1] }
+        patches = []
+        legend_lookup = {}
+        for i in legend_string.split(','):
+            legend_lookup |= parse(i)
+        for color, label in legend_lookup.items():
+            patches.append(matplotlib.patches.Patch(color=color))
+        self.ax.legend(handles=patches, labels=legend_lookup.values(), fontsize=10)
 
     def get_index_by_id(self, _id):
         """
@@ -208,6 +214,7 @@ def setting(key: str, value: Any, entity: SettingType):
 SETTINGS = [
     setting("schedule/start_date", dt.date(2023,9,1), SettingType.DATE),
     setting("schedule/finish_date", dt.date(2024,2,28), SettingType.DATE),
+    setting("schedule/legend", "m:magenta,y:yellow", SettingType.STRING),
     setting("schedule/title", "foobar", SettingType.STRING),
     setting("plot/width", 12, SettingType.NUMBER),
     setting("plot/height", 6, SettingType.NUMBER),
@@ -247,6 +254,7 @@ def main():
         sys.exit(0)
 
     s.plot()
+    s.set_legend(settings["schedule/legend"].value)
 
     plt.savefig("Figure_1.png")
     #plt.show()
