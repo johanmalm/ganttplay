@@ -83,9 +83,6 @@ class Schedule():
 
         plt.gca().invert_yaxis()
 
-        # Set title
-        plt.title('6-month lookahead', fontsize=15)
-
         # Setup axes
         months = pd.period_range(start=self.schedule_start,
                                  end=self.schedule_finish, freq='m').to_timestamp()
@@ -109,6 +106,9 @@ class Schedule():
         self.ax.axvline(x=now, color='b', linestyle='dashed')
 
         plt.margins(0.2)
+
+    def set_title(self, title):
+        plt.title(title, fontsize=15)
 
     def set_legend(self, legend_string):
         def parse(s):
@@ -215,7 +215,7 @@ SETTINGS = [
     setting("schedule/start_date", dt.date(2023,9,1), SettingType.DATE),
     setting("schedule/finish_date", dt.date(2024,2,28), SettingType.DATE),
     setting("schedule/legend", "m:magenta,y:yellow", SettingType.STRING),
-    setting("schedule/title", "foobar", SettingType.STRING),
+    setting("schedule/title", "6-month lookahead", SettingType.STRING),
     setting("plot/width", 12, SettingType.NUMBER),
     setting("plot/height", 6, SettingType.NUMBER),
 ]
@@ -254,6 +254,7 @@ def main():
         sys.exit(0)
 
     s.plot()
+    s.set_title(settings["schedule/title"].value)
     s.set_legend(settings["schedule/legend"].value)
 
     plt.savefig("Figure_1.png")

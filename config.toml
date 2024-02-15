@@ -2,6 +2,7 @@
 start_date = 2023-09-01
 finish_date = 2024-02-28
 legend = "m:magenta,y:yellow"
+title = "6-month lookahead"
 
 [plot]
 width = 12
