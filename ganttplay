@@ -101,11 +101,11 @@ class Schedule():
         self.ax.set_yticks([])
         self.ax.set_yticklabels([])
 
-        # Today-line
-        now = (dt.datetime.now().date() - self.schedule_start).days
-        self.ax.axvline(x=now, color='b', linestyle='dashed')
-
         plt.margins(0.2)
+
+    def add_today_line(self, color):
+        now = (dt.datetime.now().date() - self.schedule_start).days
+        self.ax.axvline(x=now, color=color, linestyle='dashed')
 
     def set_title(self, title):
         plt.title(title, fontsize=15)
@@ -254,6 +254,7 @@ def main():
         sys.exit(0)
 
     s.plot()
+    s.add_today_line('b')
     s.set_title(settings["schedule/title"].value)
     s.set_legend(settings["schedule/legend"].value)
 
