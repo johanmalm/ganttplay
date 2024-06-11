@@ -220,9 +220,12 @@ def main():
     parser = argparse.ArgumentParser(prog="ganttplay")
     parser.add_argument("--solve-formulas", help="Solve formulas and print values",
                         action='store_true')
+    parser.add_argument("--data", help="Path to data file", default='data', metavar="FILE")
+    parser.add_argument("--config", help="Path to config.toml file", default='config.toml'
+                        ,metavar="FILE")
     args = parser.parse_args()
 
-    with open('config.toml', 'rb') as f:
+    with open(args.config, 'rb') as f:
         config = tomllib.load(f)
 
     defaults = {setting.key: setting for setting in SETTINGS}
@@ -239,7 +242,7 @@ def main():
 
     plt.rcParams['figure.figsize'] = [settings["plot/width"].value, settings["plot/height"].value]
 
-    s = Schedule('data', settings["schedule/start_date"].value,
+    s = Schedule(args.data, settings["schedule/start_date"].value,
                  settings["schedule/finish_date"].value)
     s.process_formulas()
 
