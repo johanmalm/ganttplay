@@ -22,11 +22,6 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-def die(msg):
-    """ die """
-    print(f"fatal: {msg}")
-    sys.exit(1)
-
 def map_field(char):
     """ map the letter in a cell-name to its corresponding field name """
     if char == "D":
@@ -35,7 +30,7 @@ def map_field(char):
         return 'start'
     if char == "F":
         return 'finish'
-    die("incorrect column reference")
+    raise RuntimeError("incorrect column reference")
 
 class Schedule():
     def __init__(self, filename, start, finish):
@@ -131,7 +126,7 @@ class Schedule():
         for index, row in self.df.iterrows():
             if str(row['id']) == str(_id):
                 return index
-        die(f"no id '{_id}'")
+        raise RuntimeError(f"no id '{_id}'")
 
     def contains_cell_references(self, string):
         """ Return true if formula contains a token with letters """
@@ -240,7 +235,7 @@ def main():
         except:
             settings[key] = node
         if settings[key].entity == SettingType.DATE and type(settings[key].value) != dt.date:
-            die(f"datetime.date required for {key}; {type(settings[key].value)} provided")
+            raise RuntimeError(f"datetime.date required for {key}; {type(settings[key].value)} provided")
 
     plt.rcParams['figure.figsize'] = [settings["plot/width"].value, settings["plot/height"].value]
 
