@@ -34,7 +34,7 @@ def map_field(char):
 
 class Schedule():
     def __init__(self, filename, start, finish):
-        self.df = pd.read_csv(filename, skip_blank_lines=True, delim_whitespace=True)
+        self.df = pd.read_csv(filename, skip_blank_lines=True, sep='\\s+')
         self.schedule_start=start
         self.schedule_finish=finish
         self.schedule_dur=(self.schedule_finish - self.schedule_start).days + 1
@@ -80,14 +80,14 @@ class Schedule():
 
         # Setup axes
         months = pd.period_range(start=self.schedule_start,
-                                 end=self.schedule_finish, freq='m').to_timestamp()
+                                 end=self.schedule_finish, freq='M').to_timestamp()
         xticks=[]
         for m in months:
             delta = m.date() - self.schedule_start
             xticks.append(delta.days)
         xticklabels = pd.date_range(start=self.schedule_start,
                                     end=self.schedule_finish+dt.timedelta(days=1),
-                                    freq='m').strftime("%b")
+                                    freq='ME').strftime("%b")
         self.ax.set_xlim(0, self.schedule_dur)
         self.ax.set_xticks(xticks)
         self.ax.set_xticklabels(xticklabels)
