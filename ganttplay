@@ -185,7 +185,20 @@ class Schedule():
                         more_work_to_do = True
         for col in ['dur', 'start', 'finish']:
             self.df[col] = self.df[col].astype('int')
+
+        """
+        Progress can be specified as a 0-100 percentage or as '-1' for
+        automatic which draws the progress bar up to the today line
+        """
         self.df['_prog'] = self.df['prog'] * self.df['dur'] / 100
+        for index, row in self.df.iterrows():
+            if isinstance(row['prog'], int):
+                if row['prog'] == -1:
+                    now = (dt.datetime.now().date() - self.schedule_start).days
+                    prog = now - row['start']
+                    prog = min(prog, row['dur'])
+                    prog = max(prog, 0)
+                    self.df.at[index, '_prog'] = prog
 
     def datify(self):
         """ Convert start+finish dates to date format from the default offset (in days) """
