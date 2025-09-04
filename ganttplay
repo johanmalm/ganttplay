@@ -203,9 +203,9 @@ class Schedule():
     def datify(self):
         """ Convert start+finish dates to date format from the default offset (in days) """
         for index, row in self.df.iterrows():
-            self.df.at[index, 'start'] = (self.schedule_start +
+            self.df.at[index, 'start_date'] = (self.schedule_start +
                                           dt.timedelta(days=int(self.df.at[index, 'start'])))
-            self.df.at[index, 'finish'] = (self.schedule_start +
+            self.df.at[index, 'finish_date'] = (self.schedule_start +
                                            dt.timedelta(days=int(self.df.at[index, 'finish'])))
 
 SettingType = Enum('SettingType', 'STRING NUMBER DATE')
